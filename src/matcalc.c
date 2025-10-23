@@ -28,6 +28,8 @@ enum {
   OPERATION_OPTION_ADD,
   OPERATION_OPTION_SUB,
   OPERATION_OPTION_MUL,
+  OPERATION_OPTION_TPS,
+  OPERATION_OPTION_DET,
   OPERATION_OPTION_MAX,
 };
 
@@ -91,7 +93,7 @@ mat_add(Matrix a, Matrix b) {
   };
   for (u32 i = 0; i < result.rows; ++i) {
     for (u32 j = 0; j < result.cols; ++j) {
-      u32 val = mat_get(a, i, j) + mat_get(b, i, j);
+      s32 val = mat_get(a, i, j) + mat_get(b, i, j);
       mat_put(&result, i, j, val);
     }
   }
@@ -107,7 +109,7 @@ mat_sub(Matrix a, Matrix b) {
   };
   for (u32 i = 0; i < result.rows; ++i) {
     for (u32 j = 0; j < result.cols; ++j) {
-      u32 val = mat_get(a, i, j) - mat_get(b, i, j);
+      s32 val = mat_get(a, i, j) - mat_get(b, i, j);
       mat_put(&result, i, j, val);
     }
   }
@@ -133,7 +135,7 @@ mat_mul(Matrix a, Matrix b) {
       for (u32 row = 0; row < b.rows; ++row) {
         sb_push(b_tmp, mat_get(b, row, j));
       }
-      u32 val = 0;
+      s32 val = 0;
       for (u32 k = 0; k < a.cols; ++k) {
         val += a_tmp[k]*b_tmp[k];
       }
@@ -239,13 +241,15 @@ main(void) {
             log_warn("invalid option");
           }
         } // switch (stack_option)
-      } break;
+      } break; // case ROOT_OPTION_STACK
 
       case ROOT_OPTION_OPERATION: {
         printf("[operation option]\n");
         printf("[%d] add\n", OPERATION_OPTION_ADD);
         printf("[%d] sub\n", OPERATION_OPTION_SUB);
         printf("[%d] mul\n", OPERATION_OPTION_MUL);
+        printf("[%d] tps\n", OPERATION_OPTION_TPS);
+        printf("[%d] det\n", OPERATION_OPTION_DET);
         printf("[%d] back\n", OPERATION_OPTION_BACK);
         scanf("%d", &operation_option);
 
@@ -315,8 +319,52 @@ main(void) {
               log_warn("there is no matrix to mul");
             }
           } break;
+
+          case OPERATION_OPTION_TPS: {
+            if (sb_len(matrices) > 0) {
+              u32 idx = pick_mat_idx();
+              Matrix src = matrices[idx];
+              Matrix dst = {
+                .rows = src.cols,
+                .cols = src.rows,
+                .ptr = malloc(src.rows*src.cols*sizeof(u32)),
+              };
+              for (u32 i = 0; i < dst.rows; ++i) {
+                for (u32 j = 0; j < dst.cols; ++j) {
+                  s32 val = mat_get(src, j, i);
+                  mat_put(&dst, i, j, val);
+                }
+              }
+              sb_push(matrices, dst);
+              log_info("tps matrix: [%d]", idx+1);
+              show_mat(dst);
+            } else {
+              log_warn("there is no matrix to transpose");
+            }
+          } break;
+
+          case OPERATION_OPTION_DET: {
+            if (sb_len(matrices) > 0) {
+              u32 idx = pick_mat_idx();
+              Matrix mat = matrices[idx];
+              if ((mat.rows == 2) && (mat.cols == 2)) {
+                s32 result = (mat_get(mat, 0, 0)*mat_get(mat, 1, 1) -
+                              mat_get(mat, 0, 1)*mat_get(mat, 1, 0));
+                log_info("det matrix: [%d]", idx+1);
+                printf("%d\n", result);
+              } else {
+                log_warn("matrix must be 2x2");
+              }
+            } else {
+              log_warn("there is no matrix to transpose");
+            }
+          } break;
+
+          default: {
+            log_warn("invalid option");
+          }
         } // switch (operation_option)
-      }
+      } break; // case ROOT_OPTION_OPERATION
 
       default: {
         log_warn("invalid option");
