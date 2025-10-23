@@ -58,6 +58,12 @@
 #define clamp_bot(x, b) max(x, b);
 #define clamp(a, x, b) (((x)<(a))?(a):((x)>(b))?(b):(x))
 
+#define mem_copy(dst, src, size) memmove((dst), (src), (size))
+#define mem_set(dst, byte, size) memset((dst), (byte), (size))
+#define mem_cmp(a, b, size)      memcmp((a), (b), (size))
+
+#define mem_zero(dst, size) mem_set((dst), 0, (size))
+
 #define swap_t(T, a, b) do { T t__ = a; a = b; b = t__; } while (0)
 #define sign_t(T, x) ((T)((x) > 0) - (T)((x) < 0))
 #define abs_t(T, x) (sign_t(T, x)*(x))

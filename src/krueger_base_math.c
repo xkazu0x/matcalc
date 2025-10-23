@@ -391,10 +391,11 @@ matrix4x4_mul(Matrix4x4 a, Matrix4x4 b) {
   Matrix4x4 result = {0};
   for (u32 j = 0; j < 4; ++j) {
     for (u32 i = 0; i < 4; ++i) {
-      result.m[i][j] = (a.m[0][j]*b.m[i][0] +
-        a.m[1][j]*b.m[i][1] +
-        a.m[2][j]*b.m[i][2] +
-        a.m[3][j]*b.m[i][3]);
+      result.m[i][j] = 
+        (a.m[0][j]*b.m[i][0] +
+         a.m[1][j]*b.m[i][1] +
+         a.m[2][j]*b.m[i][2] +
+         a.m[3][j]*b.m[i][3]);
     }
   }
   return(result);
