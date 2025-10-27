@@ -1,5 +1,5 @@
-#ifndef KRUEGER_BASE_STRETCHY_BUFFER_H
-#define KRUEGER_BASE_STRETCHY_BUFFER_H
+#ifndef BASE_STRETCHY_BUFFER_H
+#define BASE_STRETCHY_BUFFER_H
 
 typedef struct {
   uxx len;
@@ -19,4 +19,4 @@ typedef struct {
 
 internal void *sb__grow(void *buf, uxx count, uxx type_size);
 
-#endif // KRUEGER_BASE_STRETCHY_BUFFER_H
+#endif // BASE_STRETCHY_BUFFER_H

@@ -1,5 +1,5 @@
-#ifndef KRUEGER_BASE_LOG_H
-#define KRUEGER_BASE_LOG_H
+#ifndef BASE_LOG_H
+#define BASE_LOG_H
 
 typedef enum {
   LOG_INFO,
@@ -20,4 +20,4 @@ global char *log_types_str[LOG_MAX] = {
 
 internal void log_msg(Log_Type type, char *msg, ...);
 
-#endif // KRUEGER_BASE_LOG_H
+#endif // BASE_LOG_H

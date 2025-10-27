@@ -1,5 +1,5 @@
-#include "krueger_base.h"
-#include "krueger_base.c"
+#include "base.h"
+#include "base.c"
 
 typedef u32 Option_Type;
 
@@ -32,20 +32,20 @@ enum {
 typedef struct {
   u32 rows;
   u32 cols;
-  s32 *ptr;
+  s32 *buf;
 } Matrix;
+
+#define mat_get(mat, i, j) ((mat).buf[(i)*(mat).cols + (j)])
+#define mat_put(mat, i, j, x) ((mat)->buf[(i)*(mat)->cols + (j)] = (x))
+
+#define mat_get_idx(mat, idx, x) ((mat).buf[(idx)])
+#define mat_put_idx(mat, idx, x) ((mat).buf[(idx)] = (x))
+
+global Matrix *matrices;
 
 global Option_Type root_option;
 global Option_Type stack_option;
 global Option_Type operation_option;
-
-global Matrix *matrices;
-
-#define mat_get(mat, i, j) ((mat).ptr[(i)*(mat).cols + (j)])
-#define mat_put(mat, i, j, x) ((mat)->ptr[(i)*(mat)->cols + (j)] = (x))
-
-#define mat_get_idx(mat, idx, x) ((mat).ptr[(idx)])
-#define mat_put_idx(mat, idx, x) ((mat).ptr[(idx)] = (x))
 
 internal Matrix
 mat_alloc(u32 rows, u32 cols) {
@@ -53,32 +53,37 @@ mat_alloc(u32 rows, u32 cols) {
   Matrix result = {
     .rows = rows,
     .cols = cols,
-    .ptr = malloc(size),
+    .buf = malloc(size),
   };
-  mem_zero(result.ptr, size);
+  mem_zero(result.buf, size);
   return(result);
 }
 
 internal void
 mat_release(Matrix mat) {
-  if (mat.ptr) {
-    free(mat.ptr);
+  if (mat.buf) {
+    free(mat.buf);
   }
   mat.cols = 0;
   mat.rows = 0;
-  mat.ptr = 0;
+  mat.buf = 0;
 }
 
-internal u32
-pick_mat_idx(void) {
+internal b32
+pick_mat(u32 *index) {
+  b32 result = true;
   printf("pick matrix:\n");
   for (uxx i = 0; i < sb_len(matrices); ++i) {
     printf("[%zu] ", i + 1);
-    if ((i+1) == sb_len(matrices)) printf("\n");
+    if ((i + 1) == sb_len(matrices)) printf("\n");
   }
-  u32 idx;
-  scanf("%d", &idx);
-  return(idx - 1);
+  u32 tmp = 0;
+  if (scanf("%d", &tmp) != 1) {
+    result = false;
+  } else {
+    *index = tmp - 1;
+  }
+  return(result);
 }
 
 internal void
@@ -86,7 +91,7 @@ show_mat(Matrix mat) {
   for (u32 i = 0; i < mat.rows; ++i) {
     printf("[ ");
     for (u32 j = 0; j < mat.cols; ++j) {
-      s32 val = mat.ptr[i*mat.cols + j];
+      s32 val = mat.buf[i*mat.cols + j];
       printf("%d ", val);
     }
     printf("]\n");
@@ -101,7 +106,7 @@ show_mat_item_pick(Matrix mat, u32 row, u32 col) {
       if ((i == row) && (j == col)) {
         printf("* ");
       } else {
-        s32 val = mat.ptr[i*mat.cols + j];
+        s32 val = mat.buf[i*mat.cols + j];
         printf("%d ", val);
       }
     }
@@ -114,7 +119,7 @@ mat_add(Matrix a, Matrix b) {
   Matrix result = {
     .rows = a.rows,
     .cols = a.cols,
-    .ptr = malloc(a.rows*a.cols*sizeof(s32)),
+    .buf = malloc(a.rows*a.cols*sizeof(s32)),
   };
   for (u32 i = 0; i < result.rows; ++i) {
     for (u32 j = 0; j < result.cols; ++j) {
@@ -130,7 +135,7 @@ mat_sub(Matrix a, Matrix b) {
   Matrix result = {
     .rows = a.rows,
     .cols = b.cols,
-    .ptr = malloc(a.rows*a.cols*sizeof(s32)),
+    .buf = malloc(a.rows*a.cols*sizeof(s32)),
   };
   for (u32 i = 0; i < result.rows; ++i) {
     for (u32 j = 0; j < result.cols; ++j) {
@@ -146,7 +151,7 @@ mat_mul(Matrix a, Matrix b) {
   Matrix result = {
     .rows = a.rows,
     .cols = b.cols,
-    .ptr = malloc(a.rows*a.cols*sizeof(s32)),
+    .buf = malloc(a.rows*a.cols*sizeof(s32)),
   };
   s32 *a_tmp = 0;
   s32 *b_tmp = 0;
@@ -187,8 +192,7 @@ mat_det(Matrix mat) {
     s32 sign = 1;
     u32 rows = mat.rows - 1;
     u32 cols = mat.cols - 1;
-    u32 dim = mat.cols;
-    for (u32 i = 0; i < dim; ++i) {
+    for (u32 i = 0; i < mat.cols; ++i) {
       Matrix tmp = mat_alloc(rows, cols);
       u32 idx = 0;
       for (u32 row = 0; row < mat.rows; ++row) {
@@ -214,7 +218,7 @@ mat_tsp(Matrix mat) {
   Matrix result = {
     .rows = mat.cols,
     .cols = mat.rows,
-    .ptr = malloc(mat.rows*mat.cols*sizeof(u32)),
+    .buf = malloc(mat.rows*mat.cols*sizeof(u32)),
   };
   for (u32 i = 0; i < result.rows; ++i) {
     for (u32 j = 0; j < result.cols; ++j) {
@@ -225,6 +229,14 @@ mat_tsp(Matrix mat) {
   return(result);
 }
 
+#define safe_input(input, str) \
+  do { \
+    if (scanf("%d", (input)) != 1) { \
+      log_error(str); \
+      quit = true; \
+    } \
+  } while (0)
+
 int
 main(void) {
   for (b32 quit = false; !quit;) {
@@ -232,7 +244,7 @@ main(void) {
     printf("[%d] stack\n", ROOT_OPTION_STACK);
     printf("[%d] operation\n", ROOT_OPTION_OPERATION);
     printf("[%d] quit\n", ROOT_OPTION_QUIT);
-    scanf("%d", &root_option);
+    safe_input(&root_option, "invalid input, please enter only digits");
 
     switch (root_option) {
       case ROOT_OPTION_QUIT: {
@@ -246,43 +258,50 @@ main(void) {
         printf("[%d] show\n", STACK_OPTION_SHOW);
         printf("[%d] clear\n", STACK_OPTION_CLEAR);
         printf("[%d] back\n", STACK_OPTION_BACK);
-        scanf("%d", &stack_option);
+        safe_input(&stack_option, "invalid input, please enter only digits");
 
         switch (stack_option) {
           case STACK_OPTION_BACK: {
-            // NOTE: do nothing and it will go back to the root menu
+            stack_option = 0;
           } break;
 
           case STACK_OPTION_MAKE: {
             u32 rows = 0;
             u32 cols = 0;
             printf("enter row count:\n");
-            scanf("%d", &rows);
+            safe_input(&rows, "invalid input");
             printf("enter col count:\n");
-            scanf("%d", &cols);
+            safe_input(&cols, "invalid input");
             Matrix mat = mat_alloc(rows, cols);
             sb_push(matrices, mat);
             log_info("make matrix: [%zu]", sb_len(matrices));
+            stack_option = 0;
           } break;
 
           case STACK_OPTION_FILL: {
             if (sb_len(matrices) > 0) {
-              u32 idx = pick_mat_idx();
-              Matrix *mat = matrices + idx;
-              for (u32 i = 0; i < mat->rows; ++i) {
-                for (u32 j = 0; j < mat->cols; ++j) {
-                  show_mat_item_pick(*mat, i, j);
-                  printf("enter value:\n");
-                  s32 val;
-                  scanf("%d", &val);
-                  mat_put(mat, i, j, val);
+              u32 idx = 0;
+              if (pick_mat(&idx)) {
+                Matrix *mat = matrices + idx;
+                for (u32 i = 0; i < mat->rows; ++i) {
+                  for (u32 j = 0; j < mat->cols; ++j) {
+                    s32 val = 0;
+                    show_mat_item_pick(*mat, i, j);
+                    printf("enter value:\n");
+                    safe_input(&val, "invalid input");
+                    mat_put(mat, i, j, val);
+                  }
                 }
+                log_info("fill matrix: [%d]", idx+1);
+                show_mat(*mat);
+              } else {
+                log_error("invalid input");
+                quit = true;
               }
-              log_info("fill matrix: [%d]", idx+1);
-              show_mat(*mat);
             } else {
               log_warn("there is no matrix to fill");
             }
+            stack_option = 0;
           } break;
 
           case STACK_OPTION_SHOW: {
@@ -295,17 +314,24 @@ main(void) {
             } else {
               log_warn("there is no matrix to show");
             }
+            stack_option = 0;
           } break;
 
           case STACK_OPTION_CLEAR: {
-            sb_clear(matrices);
+            for (uxx i = 0; i < sb_len(matrices); ++i) {
+              Matrix mat = matrices[i];
+              free(mat.buf);
+            }
+            sb_free(matrices);
+            stack_option = 0;
           } break;
 
           default: {
             log_warn("invalid option");
+            stack_option = 0;
           }
-        } // switch (stack_option)
-      } break; // case ROOT_OPTION_STACK
+        }
+      } break;
 
       case ROOT_OPTION_OPERATION: {
         printf("[operation option]\n");
@@ -315,114 +341,131 @@ main(void) {
         printf("[%d] tps\n", OPERATION_OPTION_TPS);
         printf("[%d] det\n", OPERATION_OPTION_DET);
         printf("[%d] back\n", OPERATION_OPTION_BACK);
-        scanf("%d", &operation_option);
+        safe_input(&operation_option, "invalid input, please enter only digits");
 
         switch (operation_option) {
           case OPERATION_OPTION_ADD: {
             if (sb_len(matrices) > 0) {
+              u32 idx0 = 0;
               printf("[*] + [_]\n");
-              u32 idx0 = pick_mat_idx();
-              Matrix a = matrices[idx0];
-
-              printf("[%d] + [*]\n", idx0+1);
-              u32 idx1 = pick_mat_idx();
-              Matrix b = matrices[idx1];
-
-              if ((a.rows == b.rows) && (a.cols == b.cols)) {
-                log_info("add matrix: [%d] + [%d]", idx0+1, idx1+1);
-                Matrix result = mat_add(a, b);
-                show_mat(result);
-              } else {
-                log_warn("matrix [%d]'s rows, cols must match [%d]'s rows, cols", idx0+1, idx1+1);
+              if (pick_mat(&idx0)) {
+                Matrix a = matrices[idx0];
+                u32 idx1 = 0;
+                printf("[%d] + [*]\n", idx0+1);
+                if (pick_mat(&idx1)) {
+                  Matrix b = matrices[idx1];
+                  if ((a.rows == b.rows) && (a.cols == b.cols)) {
+                    Matrix result = mat_add(a, b);
+                    log_info("add matrix: [%d] + [%d]", idx0+1, idx1+1);
+                    show_mat(result);
+                  } else {
+                    log_warn("matrix [%d]'s rows, cols must match [%d]'s rows, cols", idx0+1, idx1+1);
+                  }
+                }
               }
             } else {
               log_warn("there is no matrix to add");
             }
+            operation_option = 0;
           } break;
 
           case OPERATION_OPTION_SUB: {
             if (sb_len(matrices) > 0) {
+              u32 idx0 = 0;
               printf("[*] - [_]\n");
-              u32 idx0 = pick_mat_idx();
-              Matrix a = matrices[idx0];
-
-              printf("[%d] - [*]\n", idx0+1);
-              u32 idx1 = pick_mat_idx();
-              Matrix b = matrices[idx1];
-
-              if ((a.rows == b.rows) && (a.cols == b.cols)) {
-                log_info("sub matrix: [%d] - [%d]", idx0+1, idx1+1);
-                Matrix result = mat_sub(a, b);
-                show_mat(result);
-              } else {
-                log_warn("matrix [%d]'s rows, cols must match [%d]'s rows, cols", idx0+1, idx1+1);
+              if (pick_mat(&idx0)) {
+                Matrix a = matrices[idx0];
+                u32 idx1 = 0;
+                printf("[%d] - [*]\n", idx0+1);
+                if (pick_mat(&idx1)) {
+                  Matrix b = matrices[idx1];
+                  if ((a.rows == b.rows) && (a.cols == b.cols)) {
+                    Matrix result = mat_sub(a, b);
+                    log_info("sub matrix: [%d] - [%d]", idx0+1, idx1+1);
+                    show_mat(result);
+                  } else {
+                    log_warn("matrix [%d]'s rows, cols must match [%d]'s rows, cols", idx0+1, idx1+1);
+                  }
+                }
               }
             } else {
               log_warn("there is no matrix to sub");
             }
+            operation_option = 0;
           } break;
 
           case OPERATION_OPTION_MUL: {
             if (sb_len(matrices) > 0) {
+              u32 idx0 = 0;
               printf("[*] . [_]\n");
-              u32 idx0 = pick_mat_idx();
-              Matrix a = matrices[idx0];
-
-              printf("[%d] . [*]\n", idx0+1);
-              u32 idx1 = pick_mat_idx();
-              Matrix b = matrices[idx1];
-
-              if ((a.rows == b.cols) && (a.cols == b.rows)) {
-                log_info("mul matrix: [%d] . [%d]", idx0+1, idx1+1);
-                Matrix result = mat_mul(a, b);
-                show_mat(result);
-              } else {
-                log_warn("matrix [%d]'s rows, cols must match [%d]'s cols, rows", idx0+1, idx1+1);
+              if (pick_mat(&idx0)) {
+                Matrix a = matrices[idx0];
+                u32 idx1 = 0;
+                printf("[%d] . [*]\n", idx0+1);
+                if (pick_mat(&idx1)) {
+                  Matrix b = matrices[idx1];
+                  if ((a.rows == b.cols) && (a.cols == b.rows)) {
+                    Matrix result = mat_mul(a, b);
+                    log_info("mul matrix: [%d] . [%d]", idx0+1, idx1+1);
+                    show_mat(result);
+                  } else {
+                    log_warn("matrix [%d]'s rows, cols must match [%d]'s cols, rows", idx0+1, idx1+1);
+                  }
+                }
               }
             } else {
               log_warn("there is no matrix to mul");
             }
+            operation_option = 0;
           } break;
 
           case OPERATION_OPTION_DET: {
             if (sb_len(matrices) > 0) {
-              u32 idx = pick_mat_idx();
-              Matrix mat = matrices[idx];
-              if (mat.rows == mat.cols) {
-                s32 result = mat_det(mat);
-                log_info("det matrix: [%d]", idx+1);
-                printf("%d\n", result);
-              } else {
-                log_warn("matrix[%d] row and col count must be equal", idx+1);
+              u32 idx = 0;
+              if (pick_mat(&idx)) {
+                Matrix mat = matrices[idx];
+                if (mat.rows == mat.cols) {
+                  s32 result = mat_det(mat);
+                  log_info("det matrix: |%d|", idx+1);
+                  printf("%d\n", result);
+                } else {
+                  log_warn("matrix[%d] row and col count must be equal", idx+1);
+                }
               }
             } else {
               log_warn("there is no matrix to transpose");
             }
+            operation_option = 0;
           } break;
 
           case OPERATION_OPTION_TPS: {
             if (sb_len(matrices) > 0) {
-              u32 idx = pick_mat_idx();
-              Matrix mat = matrices[idx];
-              Matrix result = mat_tsp(mat);
-              sb_push(matrices, result);
-              log_info("tps matrix: [%d]", idx+1);
-              show_mat(result);
+              u32 idx = 0;
+              if (pick_mat(&idx)) {
+                Matrix mat = matrices[idx];
+                Matrix result = mat_tsp(mat);
+                sb_push(matrices, result);
+                log_info("tps matrix: [%d]", idx+1);
+                show_mat(result);
+              }
             } else {
               log_warn("there is no matrix to transpose");
             }
+            operation_option = 0;
           } break;
 
           default: {
             log_warn("invalid option");
+            operation_option = 0;
           }
-        } // switch (operation_option)
-      } break; // case ROOT_OPTION_OPERATION
+        }
+      } break;
 
       default: {
-        log_warn("invalid option");
+        log_warn("unknown option");
+        root_option = 0;
       }
-    } // switch (root_option)
+    }
   }
   return(0);
 }

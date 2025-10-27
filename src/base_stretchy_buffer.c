@@ -1,5 +1,5 @@
-#ifndef KRUEGER_BASE_STRETCHY_BUFFER_C
-#define KRUEGER_BASE_STRETCHY_BUFFER_C
+#ifndef BASE_STRETCHY_BUFFER_C
+#define BASE_STRETCHY_BUFFER_C
 
 internal void *
 sb__grow(void *buf, uxx count, uxx type_size) {
@@ -11,4 +11,4 @@ sb__grow(void *buf, uxx count, uxx type_size) {
   return(hdr->ptr);
 }
 
-#endif // KRUEGER_BASE_STRETCHY_BUFFER_C
+#endif // BASE_STRETCHY_BUFFER_C

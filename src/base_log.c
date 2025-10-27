@@ -1,5 +1,5 @@
-#ifndef KRUEGER_BASE_LOG_C
-#define KRUEGER_BASE_LOG_C
+#ifndef BASE_LOG_C
+#define BASE_LOG_C
 
 internal void
 log_msg(Log_Type type, char *msg, ...) {
@@ -15,4 +15,4 @@ log_msg(Log_Type type, char *msg, ...) {
   printf(print_buf);
 }
 
-#endif // KRUEGER_BASE_LOG_C
+#endif // BASE_LOG_C
