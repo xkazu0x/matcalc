@@ -39,9 +39,10 @@ if "%clang%"=="1" set out=%clang_out%
 if "%debug%"=="1"   set compile=%compile_debug%
 if "%release%"=="1" set compile=%compile_release%
 
+if "%clean%"=="1" rmdir /s /q build
 if not exist build mkdir build
 
 pushd build
-%compile% ..\src\matcalc.c %link% %out% matcalc.exe || exit /b 1
+%compile% ..\src\matcalc_main.c %link% %out% matcalc.exe || exit /b 1
 if "%run%"=="1" call matcalc.exe
 popd

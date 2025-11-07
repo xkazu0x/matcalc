@@ -1,0 +1,10 @@
+// raddbg 0.9.18 project file
+
+recent_file: path: "src/matcalc_main.c"
+recent_file: path: "src/krueger_base_arena.c"
+target:
+{
+  executable: "build/matcalc.exe"
+  working_directory: "src/"
+  enabled: 1
+}
